@@ -1,5 +1,6 @@
 # Pin Fedora Minimal as base
 ARG FEDORA_DIGEST=sha256:673e2dd3288620989514c72e6b4b29fdd9b92adb59f12901505bd7348ff32b84
+ARG BASE_IMAGE=flatpak
 
 FROM registry.fedoraproject.org/fedora-minimal@${FEDORA_DIGEST} AS flatpak
 
@@ -26,7 +27,7 @@ WORKDIR /workspace
 CMD ["/bin/bash"]
 
 
-FROM flatpak AS flatpak-builder
+FROM ${BASE_IMAGE} AS flatpak-builder
 
 LABEL org.opencontainers.image.title="AetherPak Flatpak Builder" \
       org.opencontainers.image.description="Fedora base image with flatpak-builder and compilation dependencies"

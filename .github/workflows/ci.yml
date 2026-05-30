@@ -120,7 +120,9 @@ jobs:
           platforms: linux/amd64,linux/arm64
           image: ghcr.io/aetherpak/flatpak-builder
           tags: ${{ steps.resolve.outputs.tags }}
-          extra-args: --target flatpak-builder
+          extra-args: |
+            --target flatpak-builder
+            --build-arg BASE_IMAGE=ghcr.io/aetherpak/flatpak:${{ steps.resolve.outputs.tags }}
           oci: true
 
       - name: Push Flatpak Builder Image
