@@ -8,6 +8,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint & Code Quality
@@ -21,9 +25,30 @@ jobs:
       - name: Run Pre-Commit
         uses: pre-commit/action@v3.0.1
 
+  detect-changes:
+    name: Detect Container Changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      container: ${{ steps.filter.outputs.container }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Filter Paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            container:
+              - 'Containerfile'
+              - '.github/workflows/ci.yml'
+
   publish:
     name: Build & Publish Containers
-    needs: lint
+    needs: [lint, detect-changes]
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') || needs.detect-changes.outputs.container == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
