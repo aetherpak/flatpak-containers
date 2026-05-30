@@ -81,6 +81,7 @@ jobs:
         with:
           image: ${{ steps.build-flatpak.outputs.image }}
           tags: ${{ steps.build-flatpak.outputs.tags }}
+          registry: ghcr.io
           extra-args: |
             --tls-verify=true
 
@@ -103,5 +104,6 @@ jobs:
         with:
           image: ${{ steps.build-builder.outputs.image }}
           tags: ${{ steps.build-builder.outputs.tags }}
+          registry: ghcr.io
           extra-args: |
             --tls-verify=true
