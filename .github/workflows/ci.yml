@@ -87,6 +87,8 @@ jobs:
             echo "push=false" >> "$GITHUB_OUTPUT"
           fi
 
+          echo "sha-tag=sha-$SHORT_SHA" >> "$GITHUB_OUTPUT"
+
 
       - name: Build Flatpak Base Image
         id: build-flatpak
@@ -96,7 +98,9 @@ jobs:
           containerfiles: ./Containerfile
           platforms: linux/amd64,linux/arm64
           image: ghcr.io/aetherpak/flatpak
-          tags: ${{ steps.resolve.outputs.tags }}
+          tags: |
+            ${{ steps.resolve.outputs.tags }}
+            ${{ steps.resolve.outputs.sha-tag }}
           extra-args: --target flatpak
           oci: true
 
@@ -105,7 +109,7 @@ jobs:
         uses: redhat-actions/push-to-registry@v2
         with:
           image: ${{ steps.build-flatpak.outputs.image }}
-          tags: ${{ steps.build-flatpak.outputs.tags }}
+          tags: ${{ steps.resolve.outputs.tags }}
           registry: ghcr.io
           extra-args: |
             --tls-verify=true
@@ -122,7 +126,7 @@ jobs:
           tags: ${{ steps.resolve.outputs.tags }}
           extra-args: |
             --target flatpak-builder
-            --build-arg BASE_IMAGE=ghcr.io/aetherpak/flatpak:${{ steps.resolve.outputs.tags }}
+            --build-arg BASE_IMAGE=ghcr.io/aetherpak/flatpak:${{ steps.resolve.outputs.sha-tag }}
           oci: true
 
       - name: Push Flatpak Builder Image
@@ -130,7 +134,7 @@ jobs:
         uses: redhat-actions/push-to-registry@v2
         with:
           image: ${{ steps.build-builder.outputs.image }}
-          tags: ${{ steps.build-builder.outputs.tags }}
+          tags: ${{ steps.resolve.outputs.tags }}
           registry: ghcr.io
           extra-args: |
             --tls-verify=true
