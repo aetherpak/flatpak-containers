@@ -1,0 +1,107 @@
+name: CI & Container Publish
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint & Code Quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Run Pre-Commit
+        uses: pre-commit/action@v3.0.1
+
+  publish:
+    name: Build & Publish Containers
+    needs: lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Log in to the Container registry
+        if: github.event_name != 'pull_request'
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Resolve Ref & Tags
+        id: resolve
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          SHORT_SHA="${SHA:0:7}"
+
+          if [ "$REF_NAME" = "main" ]; then
+            echo "tags=latest" >> "$GITHUB_OUTPUT"
+            echo "push=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$REF_NAME" =~ ^v[0-9] ]]; then
+            echo "tags=$REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "push=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tags=sha-$SHORT_SHA" >> "$GITHUB_OUTPUT"
+            echo "push=false" >> "$GITHUB_OUTPUT"
+          fi
+
+
+      - name: Build Flatpak Base Image
+        id: build-flatpak
+        uses: redhat-actions/buildah-build@v2
+        with:
+          context: .
+          containerfiles: ./Containerfile
+          platforms: linux/amd64,linux/arm64
+          image: ghcr.io/aetherpak/flatpak
+          tags: ${{ steps.resolve.outputs.tags }}
+          extra-args: --target flatpak
+          oci: true
+
+      - name: Push Flatpak Base Image
+        if: ${{ steps.resolve.outputs.push == 'true' && github.event_name != 'pull_request' }}
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ steps.build-flatpak.outputs.image }}
+          tags: ${{ steps.build-flatpak.outputs.tags }}
+          extra-args: |
+            --tls-verify=true
+
+
+      - name: Build Flatpak Builder Image
+        id: build-builder
+        uses: redhat-actions/buildah-build@v2
+        with:
+          context: .
+          containerfiles: ./Containerfile
+          platforms: linux/amd64,linux/arm64
+          image: ghcr.io/aetherpak/flatpak-builder
+          tags: ${{ steps.resolve.outputs.tags }}
+          extra-args: --target flatpak-builder
+          oci: true
+
+      - name: Push Flatpak Builder Image
+        if: ${{ steps.resolve.outputs.push == 'true' && github.event_name != 'pull_request' }}
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ steps.build-builder.outputs.image }}
+          tags: ${{ steps.build-builder.outputs.tags }}
+          extra-args: |
+            --tls-verify=true
