@@ -110,7 +110,6 @@ jobs:
           platforms: ${{ matrix.platform }}
           image: ghcr.io/aetherpak/flatpak
           tags: |
-            ${{ steps.resolve.outputs.tags }}-${{ matrix.suffix }}
             ${{ steps.resolve.outputs.sha-tag }}-${{ matrix.suffix }}
           extra-args: --target flatpak
           oci: true
@@ -121,7 +120,6 @@ jobs:
         with:
           image: ${{ steps.build-flatpak.outputs.image }}
           tags: |
-            ${{ steps.resolve.outputs.tags }}-${{ matrix.suffix }}
             ${{ steps.resolve.outputs.sha-tag }}-${{ matrix.suffix }}
           registry: ghcr.io
           extra-args: |
@@ -135,7 +133,7 @@ jobs:
           containerfiles: ./Containerfile
           platforms: ${{ matrix.platform }}
           image: ghcr.io/aetherpak/flatpak-builder
-          tags: ${{ steps.resolve.outputs.tags }}-${{ matrix.suffix }}
+          tags: ${{ steps.resolve.outputs.sha-tag }}-${{ matrix.suffix }}
           extra-args: |
             --target flatpak-builder
             --build-arg BASE_IMAGE=ghcr.io/aetherpak/flatpak:${{ steps.resolve.outputs.sha-tag }}-${{ matrix.suffix }}
@@ -146,7 +144,7 @@ jobs:
         uses: redhat-actions/push-to-registry@v2
         with:
           image: ${{ steps.build-builder.outputs.image }}
-          tags: ${{ steps.resolve.outputs.tags }}-${{ matrix.suffix }}
+          tags: ${{ steps.resolve.outputs.sha-tag }}-${{ matrix.suffix }}
           registry: ghcr.io
           extra-args: |
             --tls-verify=true
@@ -188,8 +186,8 @@ jobs:
           for tag in $TAGS $SHA_TAG; do
             echo "=== Merging Flatpak Base Image tag: ${tag} ==="
             podman manifest create "ghcr.io/aetherpak/flatpak:${tag}"
-            podman manifest add "ghcr.io/aetherpak/flatpak:${tag}" "docker://ghcr.io/aetherpak/flatpak:${tag}-amd64"
-            podman manifest add "ghcr.io/aetherpak/flatpak:${tag}" "docker://ghcr.io/aetherpak/flatpak:${tag}-arm64"
+            podman manifest add "ghcr.io/aetherpak/flatpak:${tag}" "docker://ghcr.io/aetherpak/flatpak:${SHA_TAG}-amd64"
+            podman manifest add "ghcr.io/aetherpak/flatpak:${tag}" "docker://ghcr.io/aetherpak/flatpak:${SHA_TAG}-arm64"
             podman manifest push --tls-verify=true "ghcr.io/aetherpak/flatpak:${tag}"
           done
 
@@ -197,7 +195,16 @@ jobs:
           for tag in $TAGS; do
             echo "=== Merging Flatpak Builder Image tag: ${tag} ==="
             podman manifest create "ghcr.io/aetherpak/flatpak-builder:${tag}"
-            podman manifest add "ghcr.io/aetherpak/flatpak-builder:${tag}" "docker://ghcr.io/aetherpak/flatpak-builder:${tag}-amd64"
-            podman manifest add "ghcr.io/aetherpak/flatpak-builder:${tag}" "docker://ghcr.io/aetherpak/flatpak-builder:${tag}-arm64"
+            podman manifest add "ghcr.io/aetherpak/flatpak-builder:${tag}" "docker://ghcr.io/aetherpak/flatpak-builder:${SHA_TAG}-amd64"
+            podman manifest add "ghcr.io/aetherpak/flatpak-builder:${tag}" "docker://ghcr.io/aetherpak/flatpak-builder:${SHA_TAG}-arm64"
             podman manifest push --tls-verify=true "ghcr.io/aetherpak/flatpak-builder:${tag}"
+          done
+
+          # Promote single-arch rolling/release tags in registry
+          for tag in $TAGS; do
+            echo "=== Promoting single-arch tags for tag: ${tag} ==="
+            skopeo copy --all --src-creds "${{ github.actor }}:${{ github.token }}" --dest-creds "${{ github.actor }}:${{ github.token }}" "docker://ghcr.io/aetherpak/flatpak:${SHA_TAG}-amd64" "docker://ghcr.io/aetherpak/flatpak:${tag}-amd64"
+            skopeo copy --all --src-creds "${{ github.actor }}:${{ github.token }}" --dest-creds "${{ github.actor }}:${{ github.token }}" "docker://ghcr.io/aetherpak/flatpak:${SHA_TAG}-arm64" "docker://ghcr.io/aetherpak/flatpak:${tag}-arm64"
+            skopeo copy --all --src-creds "${{ github.actor }}:${{ github.token }}" --dest-creds "${{ github.actor }}:${{ github.token }}" "docker://ghcr.io/aetherpak/flatpak-builder:${SHA_TAG}-amd64" "docker://ghcr.io/aetherpak/flatpak-builder:${tag}-amd64"
+            skopeo copy --all --src-creds "${{ github.actor }}:${{ github.token }}" --dest-creds "${{ github.actor }}:${{ github.token }}" "docker://ghcr.io/aetherpak/flatpak-builder:${SHA_TAG}-arm64" "docker://ghcr.io/aetherpak/flatpak-builder:${tag}-arm64"
           done
