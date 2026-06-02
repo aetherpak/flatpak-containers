@@ -46,6 +46,10 @@ RUN microdnf install -y --setopt=install_weak_deps=0 --nodocs \
         python3-pip \
         gobject-introspection \
         cairo \
+        patch \
+        unzip \
+        bzip2 \
+        zstd \
     && microdnf clean all \
     && rm -rf /var/cache/dnf /var/lib/dnf/history*
 
