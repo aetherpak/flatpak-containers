@@ -21,6 +21,7 @@ RUN microdnf install -y --setopt=install_weak_deps=0 --nodocs \
         gzip \
         gnupg2 \
         shared-mime-info \
+        dbus-daemon \
     && microdnf clean all \
     && rm -rf /var/cache/dnf /var/lib/dnf/history* \
     && /usr/bin/flatpak --version
