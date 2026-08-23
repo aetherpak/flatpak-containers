@@ -69,9 +69,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v7
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
       - name: Log in to the Container registry
         if: github.event_name != 'pull_request'
         uses: redhat-actions/podman-login@v2
@@ -103,12 +100,12 @@ jobs:
 
       - name: Build Flatpak Base Image
         id: build-flatpak
-        uses: redhat-actions/buildah-build@v2
+        uses: redhat-actions/buildah-build@v3
         with:
           context: .
           containerfiles: ./Containerfile
           platforms: ${{ matrix.platform }}
-          image: ghcr.io/aetherpak/flatpak
+          image: aetherpak/flatpak
           tags: |
             ${{ steps.resolve.outputs.sha-tag }}-${{ matrix.suffix }}
           extra-args: --target flatpak
@@ -127,16 +124,14 @@ jobs:
 
       - name: Build Flatpak Builder Image
         id: build-builder
-        uses: redhat-actions/buildah-build@v2
+        uses: redhat-actions/buildah-build@v3
         with:
           context: .
           containerfiles: ./Containerfile
           platforms: ${{ matrix.platform }}
-          image: ghcr.io/aetherpak/flatpak-builder
+          image: aetherpak/flatpak-builder
           tags: ${{ steps.resolve.outputs.sha-tag }}-${{ matrix.suffix }}
-          extra-args: |
-            --target flatpak-builder
-            --build-arg BASE_IMAGE=ghcr.io/aetherpak/flatpak:${{ steps.resolve.outputs.sha-tag }}-${{ matrix.suffix }}
+          extra-args: --target flatpak-builder
           oci: true
 
       - name: Push Flatpak Builder Image
