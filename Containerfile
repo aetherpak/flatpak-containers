@@ -49,6 +49,7 @@ RUN microdnf install -y --setopt=install_weak_deps=0 --nodocs \
         cairo \
         patch \
         unzip \
+        bsdunzip \
         bzip2 \
         zstd \
     && microdnf clean all \
