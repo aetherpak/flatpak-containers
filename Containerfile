@@ -1,5 +1,5 @@
 # Pin Fedora Minimal as base
-ARG FEDORA_DIGEST=sha256:dd6a46fe78c47bcf9acd9f49d0d0ac7f527ed245165851ba8056b0f997229521
+ARG FEDORA_DIGEST=sha256:05477647a380afaacc612d14f8fad016a604a7ff444dbc0f6b5a55f68a93403f
 ARG BASE_IMAGE=flatpak
 
 FROM registry.fedoraproject.org/fedora-minimal@${FEDORA_DIGEST} AS flatpak
